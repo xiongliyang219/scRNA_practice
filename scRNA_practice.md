@@ -108,31 +108,32 @@ Dimensional reduction without batch correction
     ## To use Python UMAP via reticulate, set umap.method to 'umap-learn' and metric to 'correlation'
     ## This message will be shown once per session
 
-    ## 22:38:46 UMAP embedding parameters a = 0.9922 b = 1.112
+    ## 23:07:10 UMAP embedding parameters a = 0.9922 b = 1.112
 
-    ## 22:38:46 Read 12445 rows and found 50 numeric columns
+    ## 23:07:10 Read 12445 rows and found 50 numeric columns
 
-    ## 22:38:46 Using Annoy for neighbor search, n_neighbors = 30
+    ## 23:07:10 Using Annoy for neighbor search, n_neighbors = 30
 
-    ## 22:38:46 Building Annoy index with metric = cosine, n_trees = 50
+    ## 23:07:10 Building Annoy index with metric = cosine, n_trees = 50
 
     ## 0%   10   20   30   40   50   60   70   80   90   100%
 
     ## [----|----|----|----|----|----|----|----|----|----|
 
     ## **************************************************|
-    ## 22:38:49 Writing NN index file to temp file /var/folders/r6/kxpmf59n6ln32s10vrjrpfkh0000gn/T//RtmpSKHrQi/file101bc6870184e
-    ## 22:38:49 Searching Annoy index using 1 thread, search_k = 3000
-    ## 22:38:55 Annoy recall = 100%
-    ## 22:38:55 Commencing smooth kNN distance calibration using 1 thread
-    ## 22:38:57 Initializing from normalized Laplacian + noise
-    ## 22:38:58 Commencing optimization for 200 epochs, with 556108 positive edges
-    ## 22:39:11 Optimization finished
+    ## 23:07:12 Writing NN index file to temp file /var/folders/r6/kxpmf59n6ln32s10vrjrpfkh0000gn/T//RtmpiSm5K9/file10351382adccf
+    ## 23:07:12 Searching Annoy index using 1 thread, search_k = 3000
+    ## 23:07:16 Annoy recall = 100%
+    ## 23:07:16 Commencing smooth kNN distance calibration using 1 thread
+    ## 23:07:17 Initializing from normalized Laplacian + noise
+    ## 23:07:18 Commencing optimization for 200 epochs, with 556108 positive edges
+    ## 23:07:28 Optimization finished
 
     p1 <- DimPlot(object = ie, reduction = "umap", group.by = "orig.ident")
     plot_grid(p1)
 
 ![](scRNA_practice_files/figure-markdown_strict/unnamed-chunk-5-1.png)
+
 As can be seen, the batches are not well mixed.
 
 Batch correction
@@ -423,32 +424,33 @@ Dimensional reduction and visualization
     ie.integrated <- RunPCA(object = ie.integrated, npcs = 50, verbose = FALSE)
     ie.integrated <- RunUMAP(object = ie.integrated, reduction = "pca", dims = 1:50)
 
-    ## 22:49:09 UMAP embedding parameters a = 0.9922 b = 1.112
+    ## 23:16:34 UMAP embedding parameters a = 0.9922 b = 1.112
 
-    ## 22:49:09 Read 12445 rows and found 50 numeric columns
+    ## 23:16:34 Read 12445 rows and found 50 numeric columns
 
-    ## 22:49:09 Using Annoy for neighbor search, n_neighbors = 30
+    ## 23:16:34 Using Annoy for neighbor search, n_neighbors = 30
 
-    ## 22:49:09 Building Annoy index with metric = cosine, n_trees = 50
+    ## 23:16:34 Building Annoy index with metric = cosine, n_trees = 50
 
     ## 0%   10   20   30   40   50   60   70   80   90   100%
 
     ## [----|----|----|----|----|----|----|----|----|----|
 
     ## **************************************************|
-    ## 22:49:12 Writing NN index file to temp file /var/folders/r6/kxpmf59n6ln32s10vrjrpfkh0000gn/T//RtmpSKHrQi/file101bc4604f1a3
-    ## 22:49:12 Searching Annoy index using 1 thread, search_k = 3000
-    ## 22:49:16 Annoy recall = 100%
-    ## 22:49:17 Commencing smooth kNN distance calibration using 1 thread
-    ## 22:49:18 Initializing from normalized Laplacian + noise
-    ## 22:49:19 Commencing optimization for 200 epochs, with 621746 positive edges
-    ## 22:49:29 Optimization finished
+    ## 23:16:37 Writing NN index file to temp file /var/folders/r6/kxpmf59n6ln32s10vrjrpfkh0000gn/T//RtmpiSm5K9/file10351b19fe33
+    ## 23:16:37 Searching Annoy index using 1 thread, search_k = 3000
+    ## 23:16:41 Annoy recall = 100%
+    ## 23:16:41 Commencing smooth kNN distance calibration using 1 thread
+    ## 23:16:42 Initializing from normalized Laplacian + noise
+    ## 23:16:42 Commencing optimization for 200 epochs, with 621746 positive edges
+    ## 23:16:52 Optimization finished
 
     p2 <- DimPlot(object = ie.integrated, reduction = "umap", group.by = "orig.ident")
 
     plot_grid(p2)
 
 ![](scRNA_practice_files/figure-markdown_strict/unnamed-chunk-7-1.png)
+
 All batches are well mixed, maybe it is not very good since it is
 possible that biological differences among Duo, Jej and Il are also
 removed. In scRNA\_practice.ipynb (combat is used there for batch
@@ -530,6 +532,7 @@ Check early enterocyte marker Arg2
     VlnPlot(ie.integrated, features = c("mm10-Arg2"))
 
 ![](scRNA_practice_files/figure-markdown_strict/unnamed-chunk-11-1.png)
+
 It looks both clusters 4 and 6 have high expression of Arg2.
 
     features.plot <- c("mm10-Arg2")
@@ -542,6 +545,7 @@ Check some other enterocyte markers.
     FeaturePlot(ie.integrated, features = c("mm10-Alpi", "mm10-Apoa1", "mm10-Apoa4", "mm10-Fabp1"))
 
 ![](scRNA_practice_files/figure-markdown_strict/unnamed-chunk-13-1.png)
+
 Compared with markers in scRNA\_practice.ipynb, clusters 4 and 6 should
 be Enterocyte imm. and Enterocyte mature respectively.
 
@@ -552,6 +556,7 @@ be Enterocyte imm. and Enterocyte mature respectively.
     FeaturePlot(ie.integrated, features = "percent.mt")
 
 ![](scRNA_practice_files/figure-markdown_strict/unnamed-chunk-14-2.png)
+
 No clusters have obvious higher mitochondrial read fractions from violin
 plot. From feature plot, cluster 0 has higher mitochondrial read
 fractions than other clusters. Cluster 0 might be EP.
@@ -570,6 +575,7 @@ Check Stem markers.
     ## RNA assay instead
 
 ![](scRNA_practice_files/figure-markdown_strict/unnamed-chunk-15-1.png)
+
 Cluster 2 is Stem.
 
 Compared with marker genes in scRNA\_practice.ipynb, cluster 1 is TA,
@@ -584,6 +590,7 @@ Annotate clusters
     DimPlot(ie.integrated, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
 
 ![](scRNA_practice_files/figure-markdown_strict/unnamed-chunk-16-1.png)
+
 Here, different from scRNA\_practice.ipynb, after the first round of
 clustering, EP belongs to one cluster while Enterocyte have two clusters
 already.
