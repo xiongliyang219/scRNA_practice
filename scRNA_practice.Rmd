@@ -1,0 +1,138 @@
+---
+title: "scRNA data analysis"
+output: html_notebook
+---
+
+Reading in the data
+```{r}
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(ggplot2)
+library(cowplot)
+# Here 'ie' stands for intestinal epithelium
+ie1.data <- Read10X(data.dir = "~/Desktop/study/R/ie/GSM2836573/")
+ie2.data <- Read10X(data.dir = "~/Desktop/study/R/ie/GSM2836574/")
+ie3.data <- Read10X(data.dir = "~/Desktop/study/R/ie/GSM2836575/")
+ie4.data <- Read10X(data.dir = "~/Desktop/study/R/ie/GSM2836576/")
+ie5.data <- Read10X(data.dir = "~/Desktop/study/R/ie/GSM2836577/")
+ie6.data <- Read10X(data.dir = "~/Desktop/study/R/ie/GSM2836578/")
+ie1 <- CreateSeuratObject(counts = ie1.data, project = "Duo_M1", min.cells = 20, min.features = 0)
+ie2 <- CreateSeuratObject(counts = ie2.data, project = "Duo_M2", min.cells = 20, min.features = 0)
+ie3 <- CreateSeuratObject(counts = ie3.data, project = "Jej_M1", min.cells = 20, min.features = 0)
+ie4 <- CreateSeuratObject(counts = ie4.data, project = "Jej_M2", min.cells = 20, min.features = 0)
+ie5 <- CreateSeuratObject(counts = ie5.data, project = "Il_M1", min.cells = 20, min.features = 0)
+ie6 <- CreateSeuratObject(counts = ie6.data, project = "Il_M2", min.cells = 20, min.features = 0)
+ie <- merge(ie1, y = c(ie2, ie3, ie4, ie5, ie6), add.cell.ids = c("Duo_M1", "Duo_M2", "Jej_M1", "Jej_M2", "Il_M1", "Il_M2"), project = 'all')
+ie
+head(colnames(ie))
+```
+
+```{r}
+table(ie$orig.ident)
+ie[["percent.mt"]] <- PercentageFeatureSet(ie, pattern = "^mm10-mt-")
+VlnPlot(ie, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, pt.size = 0.5)
+```
+
+```{r}
+plot1 <- FeatureScatter(ie, feature1 = "nCount_RNA", feature2 = "percent.mt") + theme(axis.text.x = element_text(angle = 90))
+plot2 <- FeatureScatter(ie, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") + theme(axis.text.x = element_text(angle = 90))
+plot1 + plot2
+```
+
+Filtering (using the same parameters in scRNA_practice.ipynb)
+```{r}
+ie <- subset(ie, subset = nFeature_RNA >= 700 & nCount_RNA >= 1500 & nCount_RNA <= 40000 & percent.mt < 20)
+```
+
+
+Dimensional reduction without batch correction
+```{r}
+ie <- NormalizeData(ie, normalization.method = "LogNormalize", scale.factor = 10000)
+ie <- FindVariableFeatures(ie, selection.method = "vst", nfeatures = 2000)
+ie <- ScaleData(object = ie, verbose = FALSE)
+ie <- RunPCA(object = ie, npcs = 50, verbose = FALSE)
+ie <- RunUMAP(object = ie, reduction = "pca", dims = 1:50)
+p1 <- DimPlot(object = ie, reduction = "umap", group.by = "orig.ident")
+plot_grid(p1)
+```
+As can be seen, the batches are not well mixed.
+
+Batch correction
+```{r}
+ie.list <- SplitObject(object = ie, split.by = "orig.ident")
+for (i in 1:length(x = ie.list)) {
+    ie.list[[i]] <- NormalizeData(object = ie.list[[i]], verbose = FALSE)
+    ie.list[[i]] <- FindVariableFeatures(object = ie.list[[i]], selection.method = "vst", nfeatures = 2000, verbose = FALSE)
+}
+reference.list <- ie.list[c("Duo_M1", "Duo_M2", "Jej_M1", "Jej_M2", "Il_M1", "Il_M2")]
+ie.anchors <- FindIntegrationAnchors(object.list = reference.list, dims = 1:50)
+ie.integrated <- IntegrateData(anchorset = ie.anchors, dims = 1:50)
+DefaultAssay(object = ie.integrated) <- "integrated"
+```
+
+Dimensional reduction and visualization
+```{r}
+ie.integrated <- ScaleData(object = ie.integrated, verbose = FALSE)
+ie.integrated <- RunPCA(object = ie.integrated, npcs = 50, verbose = FALSE)
+ie.integrated <- RunUMAP(object = ie.integrated, reduction = "pca", dims = 1:50)
+p2 <- DimPlot(object = ie.integrated, reduction = "umap", group.by = "orig.ident")
+
+plot_grid(p2)
+```
+All batches are well mixed, maybe it is not very good since it is possible that biological differences among Duo, Jej and Il are also removed. In scRNA_practice.ipynb (combat is used there for batch correction), for example, Duo, Jej belong to Enterocyte (Proximal) and Il belongs to Enterocyte (Distal).
+
+Clustering. Here resolution is chosen as 0.2 which results in the same number of clusters as that in scRNA_practice.ipynb. But it leads to different annotations as we can see below.
+```{r}
+ie.integrated <- FindNeighbors(ie.integrated, dims = 1:10)
+ie.integrated <- FindClusters(ie.integrated, resolution = 0.2)
+DimPlot(ie.integrated, reduction = "umap")
+```
+
+Find marker genes
+```{r}
+ie.integrated.markers <- FindAllMarkers(ie.integrated, only.pos = TRUE, min.pct = 0.2, logfc.threshold = 0.2)
+```
+```{r}
+ie.integrated.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+```
+
+Check early enterocyte marker Arg2
+```{r}
+VlnPlot(ie.integrated, features = c("mm10-Arg2"))
+```
+It looks both clusters 4 and 6 have high expression of Arg2. 
+
+```{r}
+features.plot <- c("mm10-Arg2")
+FeaturePlot(object = ie.integrated, features = features.plot)
+```
+
+Check some other enterocyte markers.
+```{r}
+FeaturePlot(ie.integrated, features = c("mm10-Alpi", "mm10-Apoa1", "mm10-Apoa4", "mm10-Fabp1"))
+```
+Compared with markers in scRNA_practice.ipynb, clusters 4 and 6 should be Enterocyte imm. and Enterocyte mature respectively.
+
+```{r}
+VlnPlot(ie.integrated, features = "percent.mt", pt.size=0)
+FeaturePlot(ie.integrated, features = "percent.mt")
+```
+No clusters have obvious higher mitochondrial read fractions from violin plot. From feature plot, cluster 0 has higher mitochondrial read fractions than other clusters. Cluster 0 might be EP.
+
+Check Stem markers.
+```{r}
+FeaturePlot(ie.integrated, features = c("mm10-Gkn3", "mm10-Ascl2", "mm10-Lgr5", "mm10-Olfm4", "mm10-Axin2", "mm10-Slc12a2"))
+```
+Cluster 2 is Stem.
+
+Compared with marker genes in scRNA_practice.ipynb, cluster 1 is TA, cluster 3 is Goblet, cluster 5 is Paneth, cluster 7 is Enteroendocrine, cluster 8 is Tuft.
+
+Annotate clusters
+```{r}
+new.cluster.ids <- c("EP", "TA", "Stem", "Goblet", "Enterocyte imm.", "Paneth", "Enterocyte mature", "Enteroendocrine", "Tuft")
+names(new.cluster.ids) <- levels(ie.integrated)
+ie.integrated <- RenameIdents(ie.integrated, new.cluster.ids)
+DimPlot(ie.integrated, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+```
+Here, different from scRNA_practice.ipynb, after the first round of clustering, EP belongs to one cluster while Enterocyte have two clusters already.
