@@ -58,11 +58,12 @@ class Decoder(kl.Layer):
         return outputs
 
 
-# VAE model
+# beta-VAE model
 class VAE(keras.Model):
-    def __init__(self, orig_dim):
+    def __init__(self, orig_dim, beta=1):
         super(VAE, self).__init__()
         self.orig_dim = orig_dim
+        self.beta = beta
         self.encoder = Encoder()
         self.decoder = Decoder(orig_dim)
 
@@ -70,7 +71,7 @@ class VAE(keras.Model):
         z_mean, z_log_var, z = self.encoder(inputs)
         reconstructed = self.decoder(z)
         # KL divergence regularization loss.
-        kl_loss = - 0.5 * tf.reduce_mean(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
+        kl_loss = - self.beta * 0.5 * tf.reduce_mean(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
         self.add_loss(kl_loss)
         return reconstructed
     
@@ -78,13 +79,14 @@ class VAE(keras.Model):
 def train_step(epochs, vae, X, batch_size=32):
     
     train_dataset = tf.data.Dataset.from_tensor_slices(X)
-    train_dataset = train_dataset.shuffle(buffer_size=3200).batch(batch_size)
+    train_dataset = train_dataset.shuffle(buffer_size=2048).batch(batch_size)
 
-    optimizer = tf.keras.optimizers.Adam()
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
     loss_metric = tf.keras.metrics.Mean()
 
     for epoch in range(epochs):
-        print("Start of epoch " + str(epoch))
+        if epoch % 10 == 0:
+            print("Start of epoch " + str(epoch))
 
         # Iterate over the batches of the dataset.
         for step, x_batch_train in enumerate(train_dataset):
@@ -99,5 +101,5 @@ def train_step(epochs, vae, X, batch_size=32):
 
             loss_metric(loss)
 
-            if step % 1000 == 0:
-                print("step %d: mean loss = %.4f" % (step, loss_metric.result()))
+            if epoch % 10 == 0 and step == 0:
+                print("step %d: mean loss = %.4f, KL loss = %.4f" % (step, loss_metric.result(), sum(vae.losses)))
